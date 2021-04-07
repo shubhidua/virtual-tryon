@@ -1,0 +1,8 @@
+import numpy as np
+from scipy import misc
+from matplotlib import pyplot as plt
+pic = imageio.imread('../output/example_output.png')
+plt.imshow(pic)
+plt.xticks([])
+plt.yticks([])
+plt.show()
