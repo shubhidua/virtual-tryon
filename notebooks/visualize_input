@@ -1,0 +1,74 @@
+import numpy as np
+import pickle as pkl
+import scipy.io
+from scipy import misc
+from matplotlib import pyplot as plt
+pic =imageio.imread('../inputs/example_person.png')
+plt.imshow(pic)
+plt.xticks([])
+plt.yticks([])
+plt.show()
+
+#** Creating a body mask from human parsing model **
+img = scipy.io.loadmat('../human_parsing/output/example_person.mat')
+img = img['segment']
+plt.imshow(((img!=1)&(img!=2)&(img!=4)&(img!=13)&(img!=0)), cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.show()
+
+# face and pants extraction
+mask = ((img==1)|(img==2)|(img==4)|(img==13)|(img==9))
+plt.imshow(mask, cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.show()
+pic = skimage.transform.resize(pic, (256, 192))
+masked_img = pic*np.stack([mask]*3, axis=2)
+masked_img[masked_img==0] = 255
+plt.imshow(masked_img)
+plt.xticks([])
+plt.yticks([])
+plt.show()
+
+# Mapping for pose estimation
+def _extract_pose_keypoints(pose):
+  pose_keypoints = - np.ones((18,2), dtype=int)
+  for i in range(18):
+    if pose['subset'][0,i] != -1: # If keypoint exists
+      pose_keypoints[i,:] = pose['candidate'][int(pose['subset'][0,i]),:2]
+  return pose_keypoints # only return the coordinates
+  def _extract_pose_map(pose_keypoints, h, w):
+    resize_h = 256.0
+    resize_w = 192.0
+    pose_keypoints = np.asarray(pose_keypoints, np.float32)
+    pose_keypoints[:, 0] = pose_keypoints[:, 0] * resize_w / float(w)
+    pose_keypoints[:, 1] = pose_keypoints[:, 1] * resize_h / float(h)
+    pose_keypoints = np.asarray(pose_keypoints, np.int)
+
+    pose_map = np.zeros((int(resize_h),int(resize_w),18))
+    for i in range(18):
+        if pose_keypoints[i,0] < 0:
+            continue
+        t = np.max((pose_keypoints[i,1] - 5, 0))
+        b = np.min((pose_keypoints[i,1] + 5, h - 1))
+        l = np.max((pose_keypoints[i,0] - 5, 0))
+        r = np.min((pose_keypoints[i,0] + 5, w - 1))
+        pose_map[t:b+1, l:r+1, i] = 255
+    return pose_map
+    pose_dict = pkl.load(open('../try-on/VITON/data/pose.pkl','rb'))
+    pose_map = _extract_pose_keypoints(pose_dict['example_person'])
+    pose_img = _extract_pose_map(pose_map, img.shape[0], img.shape[1])
+pose_img = np.sum(pose_img, axis=2)
+plt.imshow((pose_img==255), cmap='gray')
+plt.xticks([])
+plt.yticks([])
+plt.show()
+
+# clothing
+top = imageio.imread('../inputs/example_clothing.png')
+plt.imshow(top)
+plt.xticks([])
+plt.yticks([])
+plt.show()
+  
